@@ -39,14 +39,12 @@ Representa a matrícula de um aluno em um curso com os seguintes campos:
 Um serializer que transforma os dados de uma matrícula em JSON e inclui o nome do aluno:
 ```python
 from rest_framework import serializers
-from .models import Matricula
+from escola.models import Aluno, Curso, Matricula
 
-class ListaAlunosMatriculadosSerializer(serializers.ModelSerializer):
-    aluno_nome = serializers.ReadOnlyField(source='aluno.nome')
-    
+class AlunoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Matricula
-        fields = ['aluno_nome']
+        model = Aluno
+        fields = ['id', 'nome', 'rg', 'cpf', 'data_nascimento']
 ```
 
 ## Views
@@ -54,24 +52,40 @@ class ListaAlunosMatriculadosSerializer(serializers.ModelSerializer):
 ### ListaAlunosMatriculadosView
 Uma view que retorna a lista de alunos matriculados em um curso específico:
 ```python
-from rest_framework import generics
-from .models import Matricula
-from .serializers import ListaAlunosMatriculadosSerializer
+from rest_framework import viewsets, generics
+from escola.models import Aluno, Curso, Matricula
+from escola.selializer import AlunoSerializer, CursoSerializer, MatriculaSerializer, ListaMatriculasAlunoSerializer, ListaAlunosMatriculadosSerializer
+from rest_framework.authentication import BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 
-class ListaAlunosMatriculadosView(generics.ListAPIView):
-    queryset = Matricula.objects.all()
-    serializer_class = ListaAlunosMatriculadosSerializer
+class AlunosViewSet(viewsets.ModelViewSet):
+    """Exibindo todos os alunos e alunas"""
+    queryset = Aluno.objects.all()
+    serializer_class = AlunoSerializer
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAuthenticated]
 ```
 
 ## URLs
 
 As URLs são definidas em `urls.py` para mapear as rotas da API:
 ```python
-from django.urls import path
-from .views import ListaAlunosMatriculadosView
+from django.contrib import admin
+from django.urls import path, include
+from escola.views import AlunosViewSet, CursosViewSet, MatriculasViewSet, ListaMatriculasAluno, ListaAlunosMatriculados
+from rest_framework import routers
+
+
+router = routers.DefaultRouter()
+router.register('alunos', AlunosViewSet, basename='Alunos')
+router.register('cursos', CursosViewSet, basename='Cursos')
+router.register('matriculas', MatriculasViewSet, basename='Matriculas')
 
 urlpatterns = [
-    path('curso/<int:curso_id>/matriculas/', ListaAlunosMatriculadosView.as_view(), name='lista-alunos-matriculados'),
+    path('admin/', admin.site.urls),
+    path('', include(router.urls)),
+    path('aluno/<int:pk>/matriculas/', ListaMatriculasAluno.as_view()),
+    path('curso/<int:pk>/matriculas/', ListaAlunosMatriculados.as_view())
 ]
 ```
 
